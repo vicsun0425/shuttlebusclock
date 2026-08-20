@@ -115,6 +115,17 @@ struct MapPickerView: View {
             if searchFocused && !search.completions.isEmpty {
                 suggestions
             }
+
+            if let error = search.errorMessage {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.red.opacity(0.9), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.top, 6)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.top, 8)
