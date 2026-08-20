@@ -11,12 +11,14 @@ struct ContentView: View {
         ZStack {
             switch locationManager.tripState {
             case .alerting:
+                // The alarm is the one screen that *should* take over — its
+                // whole job is to be impossible to ignore.
                 ActiveAlarmView()
                     .transition(.opacity)
-            case .armed:
-                ArmedTripView()
-                    .transition(.opacity)
-            case .idle:
+            case .armed, .idle:
+                // An armed trip no longer hijacks the app. StopListView raises
+                // the trip view as a dismissible sheet, so "go back" and "end
+                // the trip" stay separate actions.
                 if needsOnboarding {
                     PermissionOnboardingView()
                 } else {

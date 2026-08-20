@@ -11,9 +11,25 @@ struct StopListView: View {
 
     @Query(sort: \BusStop.sortIndex, order: .forward) private var stops: [BusStop]
 
-    @State private var presentingNewStop = false
     @State private var presentingAlwaysUpgrade = false
-    @State private var schedulingStop: BusStop?
+    @State private var activeSheet: ActiveSheet?
+
+    /// One sheet modifier, one piece of state. Stacking several `.sheet`
+    /// modifiers on the same view is unreliable in SwiftUI — they compete, and
+    /// the loser presents a dimming layer with no content behind it.
+    private enum ActiveSheet: Identifiable {
+        case newStop
+        case schedule(BusStop)
+        case trip
+
+        var id: String {
+            switch self {
+            case .newStop:            return "new"
+            case .schedule(let stop): return "schedule-\(stop.persistentModelID.hashValue)"
+            case .trip:               return "trip"
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -28,17 +44,28 @@ struct StopListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        presentingNewStop = true
+                        activeSheet = .newStop
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $presentingNewStop) {
-                StopEditView(mode: .create)
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .newStop:            StopEditView(mode: .create)
+                case .schedule(let stop): StopScheduleEditView(stop: stop)
+                case .trip:               ArmedTripView()
+                }
             }
-            .sheet(item: $schedulingStop) { stop in
-                StopScheduleEditView(stop: stop)
+            // Raise the trip view when a trip starts, and take it away once the
+            // trip ends. Dismissing it by hand leaves `tripState` alone, which
+            // is what keeps "返回列表" from doubling as "取消行程".
+            .onChange(of: locationManager.tripState) { _, newState in
+                if case .armed = newState {
+                    activeSheet = .trip
+                } else if case .trip = activeSheet {
+                    activeSheet = nil
+                }
             }
             // Re-register geofences whenever the app comes back to the list,
             // and whenever a stop is added, removed, or edited. iOS keeps the
@@ -71,7 +98,7 @@ struct StopListView: View {
             Text("点击右上角 + 添加你常坐的班车路线")
         } actions: {
             Button {
-                presentingNewStop = true
+                activeSheet = .newStop
             } label: {
                 Text("添加站点")
             }
@@ -81,13 +108,37 @@ struct StopListView: View {
 
     private var list: some View {
         List {
+            if locationManager.tripState.isActive {
+                Section {
+                    Button {
+                        activeSheet = .trip
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bus.fill")
+                                .foregroundStyle(.tint)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("行程进行中")
+                                    .font(.headline)
+                                Text("点按查看剩余距离")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.up")
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
             Section {
                 ScheduleStatusCard(stops: stops)
             }
 
             Section {
                 ForEach(stops) { stop in
-                    StopRow(stop: stop) { schedulingStop = stop }
+                    StopRow(stop: stop) { activeSheet = .schedule(stop) }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 modelContext.delete(stop)
@@ -133,6 +184,14 @@ struct StopListView: View {
     // MARK: - Actions
 
     private func arm(_ stop: BusStop) {
+        // Already running this trip? The tap means "show me it again", not
+        // "start over" — re-arming would reset the hysteresis state.
+        if locationManager.tripState.isActive,
+           locationManager.tripState.stopID == stop.persistentModelID {
+            activeSheet = .trip
+            return
+        }
+
         switch locationManager.authorizationStatus {
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
