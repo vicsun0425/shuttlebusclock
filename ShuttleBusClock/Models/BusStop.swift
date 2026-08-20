@@ -45,6 +45,14 @@ final class BusStop {
     /// Window end, minutes since local midnight (0...1439). Exclusive.
     var windowEndMinute: Int?
 
+    /// Stable identity for CoreLocation region identifiers.
+    ///
+    /// Deliberately NOT `persistentModelID.hashValue`: Swift seeds its hasher
+    /// randomly per process, so that value changes every launch. Persistent
+    /// geofences have to survive relaunches and reboots, so they need an ID
+    /// that survives with them.
+    var stopUUID: String?
+
     init(
         name: String,
         latitude: Double,
@@ -74,6 +82,15 @@ final class BusStop {
 // MARK: - Schedule accessors
 
 extension BusStop {
+    /// Lazily assigns a stable identifier the first time one is needed.
+    /// Rows created before this field existed get theirs on first use.
+    var stableID: String {
+        if let stopUUID { return stopUUID }
+        let generated = UUID().uuidString
+        stopUUID = generated
+        return generated
+    }
+
     /// Every day selected.
     static let allWeekdaysMask = 0b1111111
     /// Mon–Fri, the common commute pattern. Sunday is bit 0, so Mon–Fri is bits 1–5.

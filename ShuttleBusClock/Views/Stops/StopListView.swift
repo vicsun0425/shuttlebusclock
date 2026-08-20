@@ -13,6 +13,7 @@ struct StopListView: View {
 
     @State private var presentingNewStop = false
     @State private var presentingAlwaysUpgrade = false
+    @State private var schedulingStop: BusStop?
 
     var body: some View {
         NavigationStack {
@@ -35,6 +36,17 @@ struct StopListView: View {
             }
             .sheet(isPresented: $presentingNewStop) {
                 StopEditView(mode: .create)
+            }
+            .sheet(item: $schedulingStop) { stop in
+                StopScheduleEditView(stop: stop)
+            }
+            // Re-register geofences whenever the app comes back to the list,
+            // and whenever a stop is added, removed, or edited. iOS keeps the
+            // regions across launches, but this is what repairs the set after
+            // the user changes something or revokes and restores permission.
+            .onAppear { locationManager.reconcileScheduleRegions(with: stops) }
+            .onChange(of: stops) { _, newStops in
+                locationManager.reconcileScheduleRegions(with: newStops)
             }
             .alert(
                 "需要「始终定位」权限",
@@ -70,8 +82,12 @@ struct StopListView: View {
     private var list: some View {
         List {
             Section {
+                ScheduleStatusCard(stops: stops)
+            }
+
+            Section {
                 ForEach(stops) { stop in
-                    StopRow(stop: stop)
+                    StopRow(stop: stop) { schedulingStop = stop }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 modelContext.delete(stop)
@@ -87,6 +103,28 @@ struct StopListView: View {
                 if let error = locationManager.lastError {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
+                }
+            }
+
+            if !locationManager.scheduleLog.isEmpty {
+                Section("最近的定时判定") {
+                    ForEach(locationManager.scheduleLog.prefix(5)) { entry in
+                        HStack(spacing: 8) {
+                            Image(systemName: entry.decision.isFiring
+                                  ? "bell.fill" : "bell.slash")
+                                .foregroundStyle(entry.decision.isFiring ? .red : .secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.stopName).font(.subheadline)
+                                Text(entry.decision.reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(entry.at, style: .time)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
             }
         }
@@ -123,6 +161,9 @@ struct StopListView: View {
 private struct StopRow: View {
     @Environment(LocationManager.self) private var locationManager
     let stop: BusStop
+    /// Tapping the clock opens the schedule editor; tapping the rest of the
+    /// row still arms a manual trip.
+    let onScheduleTapped: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -140,6 +181,11 @@ private struct StopRow: View {
                 Text(formattedRadius)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                if stop.isScheduleEnabled {
+                    Text(scheduleSummary)
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                }
             }
 
             Spacer()
@@ -154,11 +200,30 @@ private struct StopRow: View {
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.tertiary)
+                Button(action: onScheduleTapped) {
+                    Image(systemName: stop.isScheduleEnabled ? "clock.fill" : "clock")
+                        .font(.title3)
+                        .foregroundStyle(stop.isScheduleEnabled ? Color.accentColor : Color.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var scheduleSummary: String {
+        let days = (1...7)
+            .filter { stop.isWeekdaySelected($0) }
+            .map { ScheduleEvaluator.weekdayName($0).replacingOccurrences(of: "周", with: "") }
+        let dayText: String
+        switch days.count {
+        case 7: dayText = "每天"
+        case 0: dayText = "无生效日"
+        default: dayText = days.joined()
+        }
+        return "\(dayText) \(ScheduleEvaluator.timeString(stop.startMinute))–\(ScheduleEvaluator.timeString(stop.endMinute))"
     }
 
     private var isActive: Bool {

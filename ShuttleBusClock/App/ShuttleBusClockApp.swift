@@ -13,6 +13,10 @@ struct ShuttleBusClockApp: App {
         let loc = LocationManager()
         let alarm = AlarmManager()
         loc.alarmManager = alarm
+        // A scheduled geofence can relaunch the app straight into the
+        // background, with no view ever appearing — the manager needs its own
+        // way to look stops up.
+        loc.modelContainer = PersistenceController.shared
         _locationManager = State(initialValue: loc)
         _alarmManager = State(initialValue: alarm)
     }
