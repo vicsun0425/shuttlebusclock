@@ -1,0 +1,18 @@
+# XcodeGen generates this from project.yml — run `make` after cloning.
+ShuttleBusClock.xcodeproj/
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# macOS
+.DS_Store
+
+# Signing — never commit these
+*.mobileprovision
+*.p12
+*.cer
