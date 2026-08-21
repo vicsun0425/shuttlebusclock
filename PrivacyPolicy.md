@@ -1,6 +1,6 @@
 # 班车闹钟 Privacy Policy
 
-Last updated: 2026-08-19
+Last updated: 2026-08-21
 
 ## 我们不收集任何数据
 
@@ -28,6 +28,9 @@ Last updated: 2026-08-19
 - 站点名称
 - 站点经纬度
 - 提醒距离设置
+- 定时监测设置(总开关、生效星期、生效时段)
+- 闹钟诊断记录(仅事件名与时间戳,例如「闹钟触发」「音频被中断」,
+  用于在闹钟没响时排查原因;不含位置信息,不离开设备,可在 app 内一键清空)
 
 这些数据:
 
@@ -45,7 +48,7 @@ Last updated: 2026-08-19
 
 ## 联系我们
 
-如有疑问:yourname@example.com(改成你自己的邮箱)
+如有疑问,请在 GitHub 提 issue:https://github.com/vicsun0425/shuttlebusclock/issues
 
 ---
 

@@ -1,6 +1,6 @@
 name: ShuttleBusClock
 options:
-  bundleIdPrefix: com.yourname
+  bundleIdPrefix: com.vicsun0425
   deploymentTarget:
     iOS: "17.0"
   developmentLanguage: zh-Hans
@@ -32,6 +32,7 @@ targets:
     resources:
       - path: ShuttleBusClock/Resources/Assets.xcassets
       - path: ShuttleBusClock/Resources/Sounds/alarm.caf
+      - path: ShuttleBusClock/Resources/PrivacyInfo.xcprivacy
     info:
       path: ShuttleBusClock/Info.plist
       properties:
@@ -48,12 +49,10 @@ targets:
         NSLocationWhenInUseUsageDescription: "班车闹钟需要定位权限来识别你距离下车点还有多远,才能在到达前提醒你。"
         NSLocationAlwaysAndWhenInUseUsageDescription: "班车闹钟需要始终定位权限,才能在 app 关闭或锁屏后依然在到达站点前叫醒你,避免你坐过站。"
         NSLocationAlwaysUsageDescription: "班车闹钟需要始终定位权限,才能在 app 关闭或锁屏后依然在到达站点前叫醒你,避免你坐过站。"
-        NSMicrophoneUsageDescription: "未使用麦克风;此字段仅为通过 App Store 审核而声明。"
         ITSAppUsesNonExemptEncryption: false
-        UIBackgroundLocationIndicator: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.shuttlebusclock
+        PRODUCT_BUNDLE_IDENTIFIER: com.vicsun0425.shuttlebusclock
         TARGETED_DEVICE_FAMILY: "1"   # 仅 iPhone
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -73,7 +72,7 @@ targets:
       - target: ShuttleBusClock
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourname.shuttlebusclock.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.vicsun0425.shuttlebusclock.tests
         GENERATE_INFOPLIST_FILE: YES
 
 schemes:

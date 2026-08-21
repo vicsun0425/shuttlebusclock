@@ -44,7 +44,7 @@ make
 
 首次编译前修改两处:
 
-1. **Bundle ID** — 打开 `project.yml`,把 `com.yourname.shuttlebusclock` 改成你自己的(否则签名会失败)
+1. **Bundle ID** — 打开 `project.yml`,已设为 `com.vicsun0425.shuttlebusclock`;fork 本仓库的话改成你自己的(否则签名会失败)
 2. **签名 Team** — `project.yml` 里 `DEVELOPMENT_TEAM` 留空,然后在 Xcode 里 Signing & Capabilities 选自己的 Team
 
 ## 使用
