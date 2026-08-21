@@ -21,10 +21,12 @@ struct StopListView: View {
         case newStop
         case schedule(BusStop)
         case trip
+        case diagnostics
 
         var id: String {
             switch self {
             case .newStop:            return "new"
+            case .diagnostics:        return "diagnostics"
             case .schedule(let stop): return "schedule-\(stop.persistentModelID.hashValue)"
             case .trip:               return "trip"
             }
@@ -55,6 +57,7 @@ struct StopListView: View {
                 case .newStop:            StopEditView(mode: .create)
                 case .schedule(let stop): StopScheduleEditView(stop: stop)
                 case .trip:               ArmedTripView()
+                case .diagnostics:        AlarmDiagnosticsView()
                 }
             }
             // Raise the trip view when a trip starts, and take it away once the
@@ -132,6 +135,22 @@ struct StopListView: View {
                 }
             }
 
+            if locationManager.backgroundMonitoringWillFail {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("闹钟在后台不会响", systemImage: "exclamationmark.triangle.fill")
+                            .font(.headline)
+                            .foregroundStyle(.orange)
+                        Text("当前定位权限是「\(LocationManager.authName(locationManager.authorizationStatus))」。锁屏或切到其他 App 后 iOS 不会再唤醒本应用,闹钟不会响。必须改成「始终」。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("去设置修改") { openSettings() }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section {
                 ScheduleStatusCard(stops: stops)
             }
@@ -155,6 +174,16 @@ struct StopListView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.orange)
                 }
+            }
+
+            Section {
+                Button {
+                    activeSheet = .diagnostics
+                } label: {
+                    Label("闹钟诊断记录", systemImage: "stethoscope")
+                }
+            } footer: {
+                Text("闹钟没响时先看这里:能区分「没触发」和「触发了但没出声」。")
             }
 
             if !locationManager.scheduleLog.isEmpty {

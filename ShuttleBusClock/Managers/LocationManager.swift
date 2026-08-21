@@ -174,15 +174,26 @@ final class LocationManager: NSObject {
         // setting this flag can cause the app to crash on iOS.
         configureBackgroundFlagForCurrentAuth()
 
+        // Take the audio session now, while we're in the foreground and
+        // allowed to. Waiting until the alarm fires means competing with
+        // whatever the user is playing, from the background, and losing.
+        alarmManager?.prewarm()
+
         tripState = .armed(stopID: stop.persistentModelID)
         isMonitoring = true
+        AlarmDiagnostics.record(
+            "行程启动",
+            "\(stop.name) · 半径 \(Int(stop.radius)) 米 · 定位权限=\(Self.authName(authorizationStatus))"
+        )
     }
 
     /// Stop the active trip and tear down manual monitoring.
     func disarm() {
         disarmForegroundTrip()
+        alarmManager?.stopPrewarm()
         tripState = .idle
         isMonitoring = false
+        AlarmDiagnostics.record("行程取消")
     }
 
     /// Acknowledge the active alarm and stop everything *for this trip*.
@@ -355,6 +366,25 @@ final class LocationManager: NSObject {
     private func triggerAlarm(stopID: PersistentIdentifier, name: String, distance: Double) {
         tripState = .alerting(stopID: stopID)
         alarmManager?.start(stopName: name, distance: distance)
+    }
+
+    /// Human-readable authorization, for the diagnostic trail. "使用时" is the
+    /// setting that makes background monitoring quietly do nothing.
+    static func authName(_ status: CLAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined:      return "未决定"
+        case .restricted:         return "受限"
+        case .denied:             return "已拒绝"
+        case .authorizedAlways:   return "始终"
+        case .authorizedWhenInUse: return "仅使用时"
+        @unknown default:         return "未知"
+        }
+    }
+
+    /// True when monitoring will silently fail to wake the app in the
+    /// background. This is the single most likely reason an alarm never rings.
+    var backgroundMonitoringWillFail: Bool {
+        authorizationStatus != .authorizedAlways
     }
 }
 
